@@ -34,6 +34,40 @@ Install with `npm install rimraf`.
 
 ## Major Changes
 
+### Upgrading from a deprecated version
+
+Rimraf v6 supports Node.js 20 or 22 and later. If an install reports
+a deprecated transitive version, run `npm explain rimraf` to find
+which dependency brings it in. Upgrade that dependency to a release
+that uses rimraf v6 or removes rimraf, then check the refreshed lockfile.
+
+For direct v3 users, use the named `rimraf` export and await the
+result instead of passing a callback. If the old code passed a
+glob pattern, enable globbing explicitly with `{ glob: true }` or
+`rimraf --glob` on the command line.
+
+```js
+import { rimraf } from 'rimraf'
+
+await rimraf('./build')
+```
+
+For simple recursive deletion of a literal path, Node.js also
+provides [`fsPromises.rm()`](https://nodejs.org/api/fs.html#fspromisesrmpath-options).
+Use `recursive: true` to remove a directory and its contents and
+`force: true` to succeed if the path is already missing.
+
+```js
+import { rm } from 'node:fs/promises'
+
+await rm('./build', { recursive: true, force: true })
+```
+
+Before switching to `rm()`, check whether the old code relies on
+globbing, arrays of paths, filtering, abort signals, or rimraf's
+Windows-specific deletion strategy. Also update callers that check
+rimraf's boolean result, since `rm()` resolves to `undefined`.
+
 ### v5 to v6
 
 - Require node `20` or `>=22`
@@ -155,8 +189,9 @@ deletion is extremely parallelizable.
 
 ### `rimraf.native(f, [opts])`
 
-Uses the built-in `fs.rm` implementation that Node.js provides. This is
-used by default on Node.js versions greater than or equal to `14.14.0`.
+Uses the built-in `fs.rm` implementation that Node.js provides. On
+supported Node.js versions, `rimraf()` uses this implementation by
+default outside Windows when neither `signal` nor `filter` is set.
 
 ### `rimraf.native.sync(f, [opts])` <br> `rimraf.nativeSync(f, [opts])`
 
